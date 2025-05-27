@@ -1,0 +1,67 @@
+# Qt build files
+build/
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+*.obj
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.app
+*.prl
+*.autosave
+*.qmlc
+*.jsc
+*.qrc
+*.rcc
+
+# Qt Creator specific
+*.pro.user
+*.qbs.user
+*.creator.*
+*.creator
+*.creator.user.*
+CMakeLists.txt.user
+*.pyc
+
+# User-specific files
+*.swp
+*~
+.DS_Store
+
+# Generated files and cache
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcworkspace
+*.xcuserstate
+*.qmake.stash
+Makefile
+*.moc/
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# Compiled translation files
+*.qm
+
+# Debug and release folders
+debug/
+release/
+x64/
+x86/
+
+# Clangd/CLion
+.clangd/
+.idea/
+.vscode/
+
+# Backup files
+*.bak
+*.tmp
