@@ -119,8 +119,11 @@ void MainWindow::displayTasksByDeadline()
 {
     QSqlDatabase db = QSqlDatabase::database();
     if (!db.isOpen()) db.open();
+
     allTasks.clear();
     QSqlQuery query("SELECT * FROM tasks ORDER BY due_date", db);
+    QQueue<Task> queue;
+
     while(query.next()) {
         Task t;
         t.id = query.value("id").toInt();
@@ -130,12 +133,15 @@ void MainWindow::displayTasksByDeadline()
         t.subTasks = query.value("sub_tasks").toString();
         t.priority = query.value("priority").toInt();
         t.status = query.value("status").toString();
-        allTasks.push_back(t);
+        queue.enqueue(t);
     }
+
     ui->PendingList->clear();
     ui->InProgressList->clear();
     ui->CompleteList->clear();
-    for (const Task& t : allTasks) {
+
+    while (!queue.isEmpty()) {
+        Task t = queue.dequeue();
         QString item = "(" + QString::number(t.id) + ") " + t.title + " - Due: " + t.dueDate;
         if (t.status == "pending") {
             ui->PendingList->addItem(item);
@@ -146,7 +152,6 @@ void MainWindow::displayTasksByDeadline()
         }
     }
 }
-
 void MainWindow::displayTasksByPriority()
 {
     QSqlDatabase db = QSqlDatabase::database();
