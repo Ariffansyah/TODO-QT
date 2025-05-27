@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1053</width>
+    <height>865</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,8 +33,22 @@
       </widget>
       <widget class="QWidget" name="page_2">
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="12" column="0">
-         <spacer name="verticalSpacer_2">
+        <item row="15" column="0">
+         <widget class="QLabel" name="DueDateLabel">
+          <property name="text">
+           <string>Due Date(yyyy-mm-dd)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QPushButton" name="SearchButton">
+          <property name="text">
+           <string>Search</string>
+          </property>
+         </widget>
+        </item>
+        <item row="26" column="0">
+         <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Orientation::Vertical</enum>
           </property>
@@ -46,24 +60,13 @@
           </property>
          </spacer>
         </item>
-        <item row="9" column="0">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Priority (1-5)</string>
-          </property>
-         </widget>
+        <item row="19" column="0">
+         <widget class="QLineEdit" name="SubTaskLineEdit"/>
         </item>
-        <item row="3" column="1" rowspan="14">
-         <widget class="QListWidget" name="PendingList"/>
+        <item row="6" column="3" rowspan="22">
+         <widget class="QListWidget" name="InProgressList"/>
         </item>
-        <item row="1" column="1">
-         <widget class="QLabel" name="PendingLabel">
-          <property name="text">
-           <string>Pending</string>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="0">
+        <item row="22" column="0">
          <widget class="QPushButton" name="AddButton">
           <property name="text">
            <string>Add</string>
@@ -77,6 +80,73 @@
           </property>
          </widget>
         </item>
+        <item row="1" column="3">
+         <widget class="QLabel" name="InProgressLabel">
+          <property name="text">
+           <string>In Progress</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QPushButton" name="ReloadButton">
+          <property name="text">
+           <string>Reload</string>
+          </property>
+         </widget>
+        </item>
+        <item row="14" column="0">
+         <widget class="QLineEdit" name="DescriptionLineEdit"/>
+        </item>
+        <item row="6" column="2" rowspan="22">
+         <widget class="QListWidget" name="PendingList"/>
+        </item>
+        <item row="1" column="1">
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="16" column="0">
+         <widget class="QLineEdit" name="DueDateLineEdit"/>
+        </item>
+        <item row="18" column="0">
+         <widget class="QLabel" name="SubTaskLabel">
+          <property name="text">
+           <string>Sub Task (STask1, STask2, ...)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="25" column="0">
+         <widget class="QPushButton" name="SortByPriorityButton">
+          <property name="text">
+           <string>Sort By Priorty</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="PendingLabel">
+          <property name="text">
+           <string>Pending</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="4" rowspan="22">
+         <widget class="QListWidget" name="CompleteList"/>
+        </item>
+        <item row="1" column="4">
+         <widget class="QLabel" name="CompleteLabel">
+          <property name="text">
+           <string>Complete</string>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="0">
          <widget class="QPushButton" name="RedoButton">
           <property name="text">
@@ -84,8 +154,35 @@
           </property>
          </widget>
         </item>
-        <item row="15" column="0">
-         <spacer name="verticalSpacer">
+        <item row="24" column="0">
+         <widget class="QPushButton" name="SortByDeadlineButton">
+          <property name="text">
+           <string>Sort By Deadline</string>
+          </property>
+         </widget>
+        </item>
+        <item row="11" column="0">
+         <widget class="QLineEdit" name="TaskLineEdit"/>
+        </item>
+        <item row="20" column="0">
+         <widget class="QLabel" name="PriorityLabel">
+          <property name="text">
+           <string>Priority (0-5)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="21" column="0">
+         <widget class="QLineEdit" name="PriorityLineEdit"/>
+        </item>
+        <item row="9" column="0">
+         <widget class="QLabel" name="TaskLabel">
+          <property name="text">
+           <string>Task</string>
+          </property>
+         </widget>
+        </item>
+        <item row="23" column="0">
+         <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Orientation::Vertical</enum>
           </property>
@@ -97,91 +194,17 @@
           </property>
          </spacer>
         </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Due Date(dd-mm-yy)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>Description</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QPushButton" name="ReloadButton">
-          <property name="text">
-           <string>Reload</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="3">
-         <widget class="QLabel" name="CompleteLabel">
-          <property name="text">
-           <string>Complete</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="3" rowspan="14">
-         <widget class="QListWidget" name="CompleteList"/>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Task</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QPushButton" name="SearchButton">
-          <property name="text">
-           <string>Search</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QLabel" name="InProgressLabel">
-          <property name="text">
-           <string>In Progress</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
-         <widget class="QLineEdit" name="DueDateLineEdit"/>
-        </item>
-        <item row="6" column="0">
-         <widget class="QLineEdit" name="DescriptionLineEdit"/>
-        </item>
-        <item row="4" column="0">
-         <widget class="QLineEdit" name="TaskLineEdit"/>
-        </item>
-        <item row="3" column="2" rowspan="14">
-         <widget class="QListWidget" name="InProgressList"/>
-        </item>
-        <item row="10" column="0">
-         <widget class="QLineEdit" name="PriorityLineEdit"/>
-        </item>
-        <item row="13" column="0">
-         <widget class="QPushButton" name="SortByDeadlineButton">
-          <property name="text">
-           <string>Sort By Deadline</string>
-          </property>
-         </widget>
-        </item>
-        <item row="14" column="0">
-         <widget class="QPushButton" name="SortByPriorityButton">
-          <property name="text">
-           <string>Sort By Priorty</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3">
+        <item row="0" column="4">
          <widget class="QPushButton" name="NotificationButton">
           <property name="text">
            <string>Notification</string>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="0">
+         <widget class="QLabel" name="DescLabel">
+          <property name="text">
+           <string>Description</string>
           </property>
          </widget>
         </item>
@@ -197,7 +220,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1053</width>
      <height>24</height>
     </rect>
    </property>
