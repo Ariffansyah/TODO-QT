@@ -9,14 +9,16 @@ TaskDialog::TaskDialog(const QString &taskTitle,
                        const QStringList &subTasks,
                        const QString &status,
                        QWidget *parent)
-    : QDialog(parent), m_result(TaskActionDialogResult::None)
+    : QDialog(parent), m_result(TaskActionDialogResult::None), root(nullptr)
 {
     setupUi(taskTitle, description, dueDate, priority, subTasks, status);
 }
 
-void TaskDialog::setupUi(const QString &taskTitle, const QString &description, const QString &dueDate, int priority, const QStringList &subTasks, const QString &status)
+void TaskDialog::setupUi(const QString &taskTitle, const QString &description,
+                         const QString &dueDate, int priority,
+                         const QStringList &subTasks, const QString &status)
 {
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    mainLayout = new QVBoxLayout(this);
 
     QString html = "<b>" + taskTitle + "</b>";
     if (!dueDate.isEmpty())
@@ -31,21 +33,11 @@ void TaskDialog::setupUi(const QString &taskTitle, const QString &description, c
 
     QLabel *label = new QLabel(html, this);
     label->setWordWrap(true);
-    layout->addWidget(label);
+    mainLayout->addWidget(label);
 
-    treeWidget = new QTreeWidget(this);
-    treeWidget->setHeaderHidden(true);
-    if (!subTasks.isEmpty()) {
-        QTreeWidgetItem *root = new QTreeWidgetItem(treeWidget, QStringList() << "Subtasks");
-        root->setFlags(root->flags() & ~Qt::ItemIsUserCheckable);
-        for (const QString &st : subTasks) {
-            if (st.trimmed().isEmpty()) continue;
-            QTreeWidgetItem *child = new QTreeWidgetItem(root, QStringList() << st.trimmed());
-            child->setCheckState(0, Qt::Unchecked);
-        }
-        treeWidget->expandAll();
-        connect(treeWidget, &QTreeWidget::itemChanged, this, &TaskDialog::onSubTaskStateChanged);
-        layout->addWidget(treeWidget);
+    buildSubTaskTree(subTasks);
+    if (root) {
+        displaySubTaskTree(root, mainLayout);
     }
 
     QHBoxLayout *btnLayout = new QHBoxLayout;
@@ -60,7 +52,7 @@ void TaskDialog::setupUi(const QString &taskTitle, const QString &description, c
     btnLayout->addWidget(completeBtn);
     btnLayout->addWidget(deleteBtn);
     btnLayout->addWidget(cancelBtn);
-    layout->addLayout(btnLayout);
+    mainLayout->addLayout(btnLayout);
 
     connect(pendingBtn, &QPushButton::clicked, this, &TaskDialog::onButtonClicked);
     connect(inProgressBtn, &QPushButton::clicked, this, &TaskDialog::onButtonClicked);
@@ -68,7 +60,6 @@ void TaskDialog::setupUi(const QString &taskTitle, const QString &description, c
     connect(deleteBtn, &QPushButton::clicked, this, &TaskDialog::onButtonClicked);
     connect(cancelBtn, &QPushButton::clicked, this, &TaskDialog::onButtonClicked);
 
-    // Only show available actions
     if (status == "pending") pendingBtn->setDisabled(true);
     if (status == "in progress") inProgressBtn->setDisabled(true);
     if (status == "complete") completeBtn->setDisabled(true);
@@ -76,19 +67,36 @@ void TaskDialog::setupUi(const QString &taskTitle, const QString &description, c
     completeBtn->setEnabled(areAllSubTasksCompleted());
 }
 
+void TaskDialog::buildSubTaskTree(const QStringList &subTasks)
+{
+    root = new TreeNode("Subtasks");
+    for (const QString &st : subTasks) {
+        if (!st.trimmed().isEmpty())
+            root->addChild(new TreeNode(st.trimmed()));
+    }
+}
+
+void TaskDialog::displaySubTaskTree(TreeNode* node, QVBoxLayout *layout)
+{
+    if (!node) return;
+    for (TreeNode* child : node->children) {
+        QCheckBox *checkBox = new QCheckBox(child->name, this);
+        connect(checkBox, &QCheckBox::toggled, this, &TaskDialog::onSubtaskToggled);
+        checkBoxes.append(checkBox);
+        layout->addWidget(checkBox);
+    }
+}
+
 bool TaskDialog::areAllSubTasksCompleted() const
 {
-    if (!treeWidget || treeWidget->topLevelItemCount() == 0)
-        return true; // No subtasks
-    QTreeWidgetItem *root = treeWidget->topLevelItem(0);
-    for (int i = 0; i < root->childCount(); ++i) {
-        if (root->child(i)->checkState(0) != Qt::Checked)
+    for (QCheckBox* cb : checkBoxes) {
+        if (!cb->isChecked())
             return false;
     }
     return true;
 }
 
-void TaskDialog::onSubTaskStateChanged(QTreeWidgetItem*, int)
+void TaskDialog::onSubtaskToggled(bool)
 {
     completeBtn->setEnabled(areAllSubTasksCompleted());
 }

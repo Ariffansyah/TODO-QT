@@ -5,6 +5,8 @@
 #include <QtSql>
 #include <QSqlDatabase>
 
+using namespace std;
+
 enum class TaskActionType { Update, Delete };
 
 struct Task {
@@ -20,6 +22,105 @@ struct Task {
 struct TaskAction {
     Task task;
     TaskActionType type;
+};
+
+struct TaskNode {
+    Task data;
+    TaskNode* next;
+    TaskNode(Task t) : data(t), next(nullptr) {}
+};
+
+class TaskQueue {
+private:
+    TaskNode* front;
+    TaskNode* rear;
+
+public:
+    TaskQueue() : front(nullptr), rear(nullptr) {}
+
+    ~TaskQueue() {
+        while (front != nullptr) {
+            TaskNode* temp = front;
+            front = front->next;
+            delete temp;
+        }
+    }
+
+    void enqueue(const Task& task) {
+        TaskNode* newNode = new TaskNode(task);
+        if (rear == nullptr) { // kosong
+            front = rear = newNode;
+        } else {
+            rear->next = newNode;
+            rear = newNode;
+        }
+    }
+
+    bool isEmpty() const {
+        return front == nullptr;
+    }
+
+    Task dequeue() {
+        if (isEmpty()) {
+            throw std::runtime_error("Queue is empty");
+        }
+        TaskNode* temp = front;
+        Task ret = temp->data;
+        front = front->next;
+        if (front == nullptr) {
+            rear = nullptr;
+        }
+        delete temp;
+        return ret;
+    }
+};
+
+struct StackNode {
+    TaskAction data;
+    StackNode* next;
+};
+
+class Stack {
+    private:
+        StackNode* top;
+    public:
+        Stack() : top(nullptr) {}
+
+        ~Stack() {
+            while (top != nullptr) {
+                StackNode* temp = top;
+                top = top->next;
+                delete temp;
+            }
+        }
+
+        bool isEmpty() const {
+            return top == nullptr;
+        }
+
+        void clear() {
+            while (top != nullptr) {
+                StackNode* temp = top;
+                top = top->next;
+                delete temp;
+            }
+        }
+
+        void push_back(const TaskAction& action) {
+            StackNode* newNode = new StackNode{action, top};
+            top = newNode;
+        }
+
+        TaskAction takeLast() {
+            if (isEmpty()) {
+                throw out_of_range("Stack is empty");
+            }
+            StackNode* temp = top;
+            TaskAction result = top->data;
+            top = top->next;
+            delete temp;
+            return result;
+        }
 };
 
 QT_BEGIN_NAMESPACE
@@ -65,7 +166,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QVector<Task> allTasks;
-    QVector<TaskAction> undoStack, redoStack;
+    Stack undoStack, redoStack;
 };
 
 int findTaskIndexById(const QVector<Task>& tasks, int id);

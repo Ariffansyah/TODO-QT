@@ -126,7 +126,8 @@ void MainWindow::displayTasksByDeadline()
 
     allTasks.clear();
     QSqlQuery query("SELECT * FROM tasks ORDER BY due_date", db);
-    QQueue<Task> queue;
+
+    TaskQueue queue;
 
     while(query.next()) {
         Task t;
@@ -137,6 +138,7 @@ void MainWindow::displayTasksByDeadline()
         t.subTasks = query.value("sub_tasks").toString();
         t.priority = query.value("priority").toInt();
         t.status = query.value("status").toString();
+
         queue.enqueue(t);
     }
 
@@ -156,6 +158,7 @@ void MainWindow::displayTasksByDeadline()
         }
     }
 }
+
 void MainWindow::displayTasksByPriority()
 {
     QSqlDatabase db = QSqlDatabase::database();

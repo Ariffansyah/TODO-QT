@@ -2,10 +2,11 @@
 #define TASKDIALOG_H
 
 #include <QDialog>
-#include <QTreeWidget>
+#include <QVector>
 #include <QPushButton>
-#include <QLabel>
 #include <QVBoxLayout>
+#include <QCheckBox>
+#include <QLabel>
 
 enum class TaskActionDialogResult {
     None,
@@ -15,9 +16,26 @@ enum class TaskActionDialogResult {
     Delete
 };
 
-class TaskDialog : public QDialog
-{
+struct TreeNode {
+    QString name;
+    bool completed;
+    QVector<TreeNode*> children;
+
+    TreeNode(const QString &name)
+        : name(name), completed(false) {}
+
+    ~TreeNode() {
+        qDeleteAll(children);
+    }
+
+    void addChild(TreeNode* child) {
+        children.append(child);
+    }
+};
+
+class TaskDialog : public QDialog {
     Q_OBJECT
+
 public:
     TaskDialog(const QString &taskTitle,
                const QString &description,
@@ -28,18 +46,22 @@ public:
                QWidget *parent = nullptr);
 
     TaskActionDialogResult result() const { return m_result; }
-    bool areAllSubTasksCompleted() const;
 
 private slots:
+    void onSubtaskToggled(bool);
     void onButtonClicked();
-    void onSubTaskStateChanged(QTreeWidgetItem*, int);
 
 private:
-    QTreeWidget *treeWidget;
-    QPushButton *pendingBtn, *inProgressBtn, *completeBtn, *deleteBtn, *cancelBtn;
     TaskActionDialogResult m_result;
+    TreeNode* root;
+    QVector<QCheckBox*> checkBoxes;
+    QPushButton *pendingBtn, *inProgressBtn, *completeBtn, *deleteBtn, *cancelBtn;
+    QVBoxLayout *mainLayout;
 
     void setupUi(const QString &taskTitle, const QString &description, const QString &dueDate, int priority, const QStringList &subTasks, const QString &status);
+    void buildSubTaskTree(const QStringList &subTasks);
+    void displaySubTaskTree(TreeNode* node, QVBoxLayout *layout);
+    bool areAllSubTasksCompleted() const;
 };
 
 #endif // TASKDIALOG_H
