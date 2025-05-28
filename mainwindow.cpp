@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QCheckBox>
 #include <QRegularExpression>
+#include <QFileDialog>
 
 int findTaskIndexById(const QVector<Task>& tasks, int id) {
     for (int i = 0; i < tasks.size(); ++i) {
@@ -723,3 +724,73 @@ void MainWindow::on_BackButtonNotif_clicked()
     ui->stackedWidget->setCurrentWidget(ui->page_2);
 }
 
+QString MainWindow::buildTaskJson(const Task& task, int level, bool isLastItem)
+    {
+        QString indent(level * 2, ' ');
+        QString json;
+
+        json += indent + "{\n";
+        json += indent + "  \"id\": " + QString::number(task.id) + ",\n";
+
+        QString escapedTitle = task.title;
+        escapedTitle.replace("\"", "\\\"");
+        json += indent + "  \"title\": \"" + escapedTitle + "\",\n";
+
+        QString escapedDesc = task.description;
+        escapedDesc.replace("\"", "\\\"");
+        json += indent + "  \"description\": \"" + escapedDesc + "\",\n";
+
+        json += indent + "  \"dueDate\": \"" + task.dueDate + "\",\n";
+        json += indent + "  \"priority\": " + QString::number(task.priority) + ",\n";
+        json += indent + "  \"status\": \"" + task.status + "\",\n";
+
+        if (!task.subTasks.isEmpty()) {
+            QString escapedSubTasks = task.subTasks;
+            escapedSubTasks.replace("\"", "\\\"");
+            json += indent + "  \"subtasks\": \"" + escapedSubTasks + "\"\n";
+        } else {
+            json += indent + "  \"subtasks\": \"\"\n";
+        }
+
+        json += indent + "}";
+
+        if (!isLastItem)
+            json += ",";
+
+        json += "\n";
+
+        return json;
+    }
+
+    void MainWindow::on_ExportButton_clicked()
+    {
+        QString fileName = QFileDialog::getSaveFileName(this,
+                                                        tr("Export Tasks"), "",
+                                                        tr("JSON Files (*.json);;All Files (*)"));
+
+        if (fileName.isEmpty())
+            return;
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QMessageBox::warning(this, "Export Error", "Could not open file for writing.");
+            return;
+        }
+
+        QTextStream out(&file);
+
+        out << "{\n";
+        out << "  \"tasks\": [\n";
+
+        refreshAllTasksFromDb();
+        for (int i = 0; i < allTasks.size(); ++i) {
+            out << buildTaskJson(allTasks[i], 2, i == allTasks.size()-1);
+        }
+
+        out << "  ]\n";
+        out << "}\n";
+
+        file.close();
+        QMessageBox::information(this, "Export Successful",
+                                 QString("Tasks exported to %1").arg(fileName));
+    }

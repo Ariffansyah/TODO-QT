@@ -19,6 +19,7 @@ struct Task {
     QString status;
 };
 
+
 struct TaskAction {
     Task task;
     TaskActionType type;
@@ -161,10 +162,10 @@ private slots:
     void on_SearchButton_clicked();
     void on_BackButtonSearch_clicked();
     void on_NotificationButton_clicked();
-
     void on_NotificationlistWidget_doubleClicked(const QModelIndex &index);
-
     void on_BackButtonNotif_clicked();
+    QString buildTaskJson(const Task& task, int level, bool isLastItem);
+    void on_ExportButton_clicked();
 
 private:
     Ui::MainWindow *ui;
