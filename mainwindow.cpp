@@ -1,10 +1,14 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "taskdialog.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QSqlQuery>
 #include <QSqlError>
-#include <algorithm>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QCheckBox>
+#include <QRegularExpression>
 
 int findTaskIndexById(const QVector<Task>& tasks, int id) {
     for (int i = 0; i < tasks.size(); ++i) {
@@ -237,6 +241,27 @@ void MainWindow::on_SortByPriorityButton_clicked()
     displayTasksByPriority();
 }
 
+Task getTaskById(int id) {
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) db.open();
+    QSqlQuery q(db);
+    q.prepare("SELECT * FROM tasks WHERE id = ?");
+    q.addBindValue(id);
+    q.exec();
+    if (q.next()) {
+        Task t;
+        t.id = q.value("id").toInt();
+        t.title = q.value("title").toString();
+        t.description = q.value("description").toString();
+        t.dueDate = q.value("due_date").toString();
+        t.subTasks = q.value("sub_tasks").toString();
+        t.priority = q.value("priority").toInt();
+        t.status = q.value("status").toString();
+        return t;
+    }
+    return Task{};
+}
+
 void MainWindow::on_PendingList_doubleClicked(const QModelIndex &index)
 {
     QListWidgetItem* item = ui->PendingList->item(index.row());
@@ -248,62 +273,52 @@ void MainWindow::on_PendingList_doubleClicked(const QModelIndex &index)
         return;
     }
     QString leftPart = details[0];
-    QString dueDate = details[1];
     QRegularExpression re("^\\((\\d+)\\)\\s*(.+)$");
     QRegularExpressionMatch match = re.match(leftPart);
     if (!match.hasMatch()) {
         QMessageBox::warning(this, "Parsing Error", "Could not extract task ID and title.");
         return;
     }
-    QString id = match.captured(1);
-    QString taskTitle = match.captured(2);
+    int id = match.captured(1).toInt();
+    Task t = getTaskById(id);
+    QStringList subTasksArray = t.subTasks.split(",", Qt::SkipEmptyParts);
+    TaskDialog dlg(t.title, t.description, t.dueDate, t.priority, subTasksArray, t.status, this);
+    dlg.setWindowTitle("Task Options");
+    dlg.exec();
     QSqlDatabase db = QSqlDatabase::database();
     if (!db.isOpen()) db.open();
-    QSqlQuery selectQuery(db);
-    selectQuery.prepare("SELECT * FROM tasks WHERE id = ?");
-    selectQuery.addBindValue(id.trimmed());
-    selectQuery.exec();
-    if (!selectQuery.next()) {
-        QMessageBox::warning(this, "Task Not Found", "The selected task could not be found in the database.");
-        return;
-    }
-    QString message = QString("Task: %1\nDue Date: %2\n\nWhat would you like to do with this task?").arg(taskTitle, dueDate);
-    QMessageBox msgBox(this);
-    msgBox.setText(message);
-    msgBox.setWindowTitle("Task Options");
-    QPushButton* Btn1 = msgBox.addButton("Set to In Progress", QMessageBox::ActionRole);
-    QPushButton* Btn2 = msgBox.addButton("Set to Complete", QMessageBox::ActionRole);
-    QPushButton* DeleteBtn = msgBox.addButton("Delete", QMessageBox::ActionRole);
-    QPushButton* cancelBtn = msgBox.addButton("Cancel", QMessageBox::RejectRole);
-    msgBox.exec();
     QString newStatus;
-    if (msgBox.clickedButton() == Btn1) {
-        pushTaskToUndoStack(id.toInt());
+    switch (dlg.result()) {
+    case TaskActionDialogResult::SetToInProgress:
+        pushTaskToUndoStack(id);
         newStatus = "in progress";
-    } else if (msgBox.clickedButton() == Btn2) {
-        pushTaskToUndoStack(id.toInt());
+        break;
+    case TaskActionDialogResult::SetToComplete:
+        pushTaskToUndoStack(id);
         newStatus = "complete";
-    } else if (msgBox.clickedButton() == DeleteBtn) {
-        pushDeletedTaskToUndoStack(id.toInt());
+        break;
+    case TaskActionDialogResult::Delete: {
+        pushDeletedTaskToUndoStack(id);
         QSqlQuery deleteQuery(db);
         deleteQuery.prepare("DELETE FROM tasks WHERE id = ?");
-        deleteQuery.addBindValue(id.trimmed());
+        deleteQuery.addBindValue(id);
         deleteQuery.exec();
         refreshAllTasksFromDb();
         displayTasks();
-        QMessageBox::information(this, "Task Deleted", QString("The task '%1' has been deleted.").arg(taskTitle));
+        QMessageBox::information(this, "Task Deleted", QString("The task '%1' has been deleted.").arg(t.title));
         return;
-    } else {
+    }
+    default:
         return;
     }
     QSqlQuery updateQuery(db);
     updateQuery.prepare("UPDATE tasks SET status = ? WHERE id = ?");
     updateQuery.addBindValue(newStatus);
-    updateQuery.addBindValue(id.trimmed());
+    updateQuery.addBindValue(id);
     updateQuery.exec();
     refreshAllTasksFromDb();
     displayTasks();
-    QMessageBox::information(this, "Task Updated", QString("The task '%1' has been updated to '%2'.").arg(taskTitle, newStatus));
+    QMessageBox::information(this, "Task Updated", QString("The task '%1' has been updated to '%2'.").arg(t.title, newStatus));
 }
 
 void MainWindow::on_InProgressList_doubleClicked(const QModelIndex &index)
@@ -317,56 +332,52 @@ void MainWindow::on_InProgressList_doubleClicked(const QModelIndex &index)
         return;
     }
     QString leftPart = details[0];
-    QString dueDate = details[1];
     QRegularExpression re("^\\((\\d+)\\)\\s*(.+)$");
     QRegularExpressionMatch match = re.match(leftPart);
     if (!match.hasMatch()) {
         QMessageBox::warning(this, "Parsing Error", "Could not extract task ID and title.");
         return;
     }
-    QString id = match.captured(1);
-    QString taskTitle = match.captured(2);
-    QString message = QString("Task: %1\nDue Date: %2\n\nWhat would you like to do with this task?").arg(taskTitle, dueDate);
-    QMessageBox msgBox(this);
-    msgBox.setText(message);
-    msgBox.setWindowTitle("Task Options");
-    QPushButton* Btn1 = msgBox.addButton("Set to Pending", QMessageBox::ActionRole);
-    QPushButton* Btn2 = msgBox.addButton("Set to Complete", QMessageBox::ActionRole);
-    QPushButton* DeleteBtn = msgBox.addButton("Delete", QMessageBox::ActionRole);
-    QPushButton* cancelBtn = msgBox.addButton("Cancel", QMessageBox::RejectRole);
-    msgBox.exec();
-    QString newStatus;
-    if (msgBox.clickedButton() == Btn1) {
-        pushTaskToUndoStack(id.toInt());
-        newStatus = "pending";
-    } else if (msgBox.clickedButton() == Btn2) {
-        pushTaskToUndoStack(id.toInt());
-        newStatus = "complete";
-    } else if(msgBox.clickedButton() == DeleteBtn) {
-        pushDeletedTaskToUndoStack(id.toInt());
-        QSqlDatabase db = QSqlDatabase::database();
-        if (!db.isOpen()) db.open();
-        QSqlQuery query(db);
-        query.prepare("DELETE FROM tasks WHERE id = ?");
-        query.addBindValue(id.trimmed());
-        query.exec();
-        refreshAllTasksFromDb();
-        displayTasks();
-        QMessageBox::information(this, "Task Deleted", QString("The task '%1' has been deleted.").arg(taskTitle));
-        return;
-    } else {
-        return;
-    }
+    int id = match.captured(1).toInt();
+    Task t = getTaskById(id);
+    QStringList subTasksArray = t.subTasks.split(",", Qt::SkipEmptyParts);
+    TaskDialog dlg(t.title, t.description, t.dueDate, t.priority, subTasksArray, t.status, this);
+    dlg.setWindowTitle("Task Options");
+    dlg.exec();
     QSqlDatabase db = QSqlDatabase::database();
     if (!db.isOpen()) db.open();
-    QSqlQuery query(db);
-    query.prepare("UPDATE tasks SET status = ? WHERE id = ?");
-    query.addBindValue(newStatus);
-    query.addBindValue(id.trimmed());
-    query.exec();
+    QString newStatus;
+    switch (dlg.result()) {
+    case TaskActionDialogResult::SetToPending:
+        pushTaskToUndoStack(id);
+        newStatus = "pending";
+        break;
+    case TaskActionDialogResult::SetToComplete:
+        pushTaskToUndoStack(id);
+        newStatus = "complete";
+        break;
+    case TaskActionDialogResult::Delete: {
+        pushDeletedTaskToUndoStack(id);
+        QSqlQuery deleteQuery(db);
+        deleteQuery.prepare("DELETE FROM tasks WHERE id = ?");
+        deleteQuery.addBindValue(id);
+        deleteQuery.exec();
+        refreshAllTasksFromDb();
+        displayTasks();
+        QMessageBox::information(this, "Task Deleted", QString("The task '%1' has been deleted.").arg(t.title));
+        return;
+    }
+    default:
+        return;
+    }
+    QSqlQuery updateQuery(db);
+    updateQuery.prepare("UPDATE tasks SET status = ? WHERE id = ?");
+    updateQuery.addBindValue(newStatus);
+    updateQuery.addBindValue(id);
+    updateQuery.exec();
     refreshAllTasksFromDb();
     displayTasks();
-    QMessageBox::information(this, "Task Updated", QString("The task '%1' has been updated to '%2'.").arg(taskTitle, newStatus));
+    QMessageBox::information(this, "Task Updated", QString("The task '%1' has been updated to '%2'.").arg(t.title, newStatus));
 }
 
 void MainWindow::on_CompleteList_doubleClicked(const QModelIndex &index)
@@ -380,57 +391,54 @@ void MainWindow::on_CompleteList_doubleClicked(const QModelIndex &index)
         return;
     }
     QString leftPart = details[0];
-    QString dueDate = details[1];
     QRegularExpression re("^\\((\\d+)\\)\\s*(.+)$");
     QRegularExpressionMatch match = re.match(leftPart);
     if (!match.hasMatch()) {
         QMessageBox::warning(this, "Parsing Error", "Could not extract task ID and title.");
         return;
     }
-    QString id = match.captured(1);
-    QString taskTitle = match.captured(2);
-    QString message = QString("Task: %1\nDue Date: %2\n\nWhat would you like to do with this task?").arg(taskTitle, dueDate);
-    QMessageBox msgBox(this);
-    msgBox.setText(message);
-    msgBox.setWindowTitle("Task Options");
-    QPushButton* Btn1 = msgBox.addButton("Set to Pending", QMessageBox::ActionRole);
-    QPushButton* Btn2 = msgBox.addButton("Set to In Progress", QMessageBox::ActionRole);
-    QPushButton* DeleteBtn = msgBox.addButton("Delete", QMessageBox::ActionRole);
-    QPushButton* cancelBtn = msgBox.addButton("Cancel", QMessageBox::RejectRole);
-    msgBox.exec();
-    QString newStatus;
-    if (msgBox.clickedButton() == Btn1) {
-        pushTaskToUndoStack(id.toInt());
-        newStatus = "pending";
-    } else if (msgBox.clickedButton() == Btn2) {
-        pushTaskToUndoStack(id.toInt());
-        newStatus = "in progress";
-    } else if(msgBox.clickedButton() == DeleteBtn) {
-        pushDeletedTaskToUndoStack(id.toInt());
-        QSqlDatabase db = QSqlDatabase::database();
-        if (!db.isOpen()) db.open();
-        QSqlQuery query(db);
-        query.prepare("DELETE FROM tasks WHERE id = ?");
-        query.addBindValue(id.trimmed());
-        query.exec();
-        refreshAllTasksFromDb();
-        displayTasks();
-        QMessageBox::information(this, "Task Deleted", QString("The task '%1' has been deleted.").arg(taskTitle));
-        return;
-    } else {
-        return;
-    }
+    int id = match.captured(1).toInt();
+    Task t = getTaskById(id);
+    QStringList subTasksArray = t.subTasks.split(",", Qt::SkipEmptyParts);
+    TaskDialog dlg(t.title, t.description, t.dueDate, t.priority, subTasksArray, t.status, this);
+    dlg.setWindowTitle("Task Options");
+    dlg.exec();
     QSqlDatabase db = QSqlDatabase::database();
     if (!db.isOpen()) db.open();
-    QSqlQuery query(db);
-    query.prepare("UPDATE tasks SET status = ? WHERE id = ?");
-    query.addBindValue(newStatus);
-    query.addBindValue(id.trimmed());
-    query.exec();
+    QString newStatus;
+    switch (dlg.result()) {
+    case TaskActionDialogResult::SetToPending:
+        pushTaskToUndoStack(id);
+        newStatus = "pending";
+        break;
+    case TaskActionDialogResult::SetToInProgress:
+        pushTaskToUndoStack(id);
+        newStatus = "in progress";
+        break;
+    case TaskActionDialogResult::Delete: {
+        pushDeletedTaskToUndoStack(id);
+        QSqlQuery deleteQuery(db);
+        deleteQuery.prepare("DELETE FROM tasks WHERE id = ?");
+        deleteQuery.addBindValue(id);
+        deleteQuery.exec();
+        refreshAllTasksFromDb();
+        displayTasks();
+        QMessageBox::information(this, "Task Deleted", QString("The task '%1' has been deleted.").arg(t.title));
+        return;
+    }
+    default:
+        return;
+    }
+    QSqlQuery updateQuery(db);
+    updateQuery.prepare("UPDATE tasks SET status = ? WHERE id = ?");
+    updateQuery.addBindValue(newStatus);
+    updateQuery.addBindValue(id);
+    updateQuery.exec();
     refreshAllTasksFromDb();
     displayTasks();
-    QMessageBox::information(this, "Task Updated", QString("The task '%1' has been updated to '%2'.").arg(taskTitle, newStatus));
+    QMessageBox::information(this, "Task Updated", QString("The task '%1' has been updated to '%2'.").arg(t.title, newStatus));
 }
+
 
 void MainWindow::on_UndoButton_clicked()
 {
@@ -509,3 +517,54 @@ void MainWindow::on_RedoButton_clicked()
     displayTasks();
     QMessageBox::information(this, "Redo", "Redo performed.");
 }
+
+void MainWindow::on_SearchPageButton_clicked()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_3);
+}
+
+
+void MainWindow::on_SearchButton_clicked()
+{
+    QSqlDatabase db = QSqlDatabase::database();
+    if (!db.isOpen()) db.open();
+    QString searchText = ui->SearchLineEdit->text();
+    if (searchText.isEmpty()) {
+        QMessageBox::warning(this, "Search Error", "Please enter a search term.");
+        return;
+    }
+    QSqlQuery query(db);
+    query.prepare("SELECT * FROM tasks WHERE title LIKE ? OR description LIKE ?");
+    query.addBindValue("%" + searchText + "%");
+    query.addBindValue("%" + searchText + "%");
+    query.exec();
+    ui->SearchListWidget->clear();
+    while(query.next()) {
+        Task t;
+        t.id = query.value("id").toInt();
+        t.title = query.value("title").toString();
+        t.description = query.value("description").toString();
+        t.dueDate = query.value("due_date").toString();
+        t.subTasks = query.value("sub_tasks").toString();
+        t.priority = query.value("priority").toInt();
+        t.status = query.value("status").toString();
+        QString itemText = QString("(%1) %2 - Due: %3").arg(t.id).arg(t.title).arg(t.dueDate);
+        ui->SearchListWidget->addItem(itemText);
+    }
+    if (ui->SearchListWidget->count() == 0) {
+        ui->SearchListWidget->addItem("No tasks found.");
+    }
+    db.close();
+
+}
+
+
+void MainWindow::on_BackButtonSearch_clicked()
+{
+    ui->stackedWidget->setCurrentWidget(ui->page_2);
+    ui->SearchLineEdit->clear();
+    ui->SearchListWidget->clear();
+    refreshAllTasksFromDb();
+    displayTasks();
+}
+

@@ -38,6 +38,8 @@ else()
     else()
         add_executable(TO-DO
             ${PROJECT_SOURCES}
+            taskdialog.h
+            taskdialog.cpp
         )
     endif()
 endif()

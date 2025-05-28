@@ -56,6 +56,12 @@ private slots:
     void on_UndoButton_clicked();
     void on_RedoButton_clicked();
 
+    void on_SearchPageButton_clicked();
+
+    void on_SearchButton_clicked();
+
+    void on_BackButtonSearch_clicked();
+
 private:
     Ui::MainWindow *ui;
     QVector<Task> allTasks;
