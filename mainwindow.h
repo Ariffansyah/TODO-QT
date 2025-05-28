@@ -142,6 +142,7 @@ private slots:
     void displayTasks();
     void displayTasksByDeadline();
     void displayTasksByPriority();
+    void displayNotifications();
     void pushTaskToUndoStack(const int id);
     void pushDeletedTaskToUndoStack(const int id);
     void pushTaskToRedoStack(const int id, TaskActionType type);
@@ -156,12 +157,14 @@ private slots:
     void on_CompleteList_doubleClicked(const QModelIndex &index);
     void on_UndoButton_clicked();
     void on_RedoButton_clicked();
-
     void on_SearchPageButton_clicked();
-
     void on_SearchButton_clicked();
-
     void on_BackButtonSearch_clicked();
+    void on_NotificationButton_clicked();
+
+    void on_NotificationlistWidget_doubleClicked(const QModelIndex &index);
+
+    void on_BackButtonNotif_clicked();
 
 private:
     Ui::MainWindow *ui;
