@@ -171,6 +171,10 @@ private:
     Ui::MainWindow *ui;
     QVector<Task> allTasks;
     Stack undoStack, redoStack;
+    QMap<int, QSet<int>> dependencyGraph;
+    void buildTaskDependencyGraph();
+    QVector<Task> getGraphRecommendedTasks(int maxRecs = 5);
+    void updateRecommendations();
 };
 
 int findTaskIndexById(const QVector<Task>& tasks, int id);

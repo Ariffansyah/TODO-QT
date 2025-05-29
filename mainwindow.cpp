@@ -118,6 +118,8 @@ void MainWindow::displayTasks()
             ui->CompleteList->addItem(item);
         }
     }
+
+    updateRecommendations();
 }
 
 void MainWindow::displayTasksByDeadline()
@@ -230,7 +232,7 @@ void MainWindow::displayNotifications()
         } else if (taskDate == tomorrow) {
             dueText = "Due Tomorrow! Be prepared.";
         } else {
-            continue; // Skip tasks not urgent
+            continue;
         }
 
         TaskNode* newNode = new TaskNode(t);
@@ -252,7 +254,6 @@ void MainWindow::displayNotifications()
     db.close();
     ui->stackedWidget->setCurrentWidget(ui->page_4);
 
-    // Clean up (optional if not storing list permanently)
     TaskNode* current = head;
     while (current) {
         TaskNode* temp = current;
@@ -261,6 +262,69 @@ void MainWindow::displayNotifications()
     }
 }
 
+void MainWindow::buildTaskDependencyGraph() {
+    dependencyGraph.clear();
+    QMap<QString, int> titleToId;
+    for (const Task& t : allTasks)
+        titleToId[t.title.toLower()] = t.id;
+
+    for (const Task& t : allTasks) {
+        QSet<int> deps;
+        QString desc = t.description.toLower();
+        for (const QString& otherTitle : titleToId.keys()) {
+            if (t.id == titleToId[otherTitle])
+                continue;
+            if (desc.contains(otherTitle) || t.title.toLower().contains(otherTitle)) {
+                deps.insert(titleToId[otherTitle]);
+            }
+        }
+        dependencyGraph[t.id] = deps;
+    }
+}
+
+QVector<Task> MainWindow::getGraphRecommendedTasks(int maxRecs) {
+    QSet<int> completed;
+    for (const Task& t : allTasks) {
+        if (t.status == "complete")
+            completed.insert(t.id);
+    }
+    QVector<Task> candidates;
+    for (const Task& t : allTasks) {
+        if (t.status == "complete") continue;
+        bool allDepsDone = true;
+        for (int dep : dependencyGraph.value(t.id)) {
+            if (!completed.contains(dep)) {
+                allDepsDone = false;
+                break;
+            }
+        }
+        if (allDepsDone)
+            candidates.push_back(t);
+    }
+    std::sort(candidates.begin(), candidates.end(), [](const Task& a, const Task& b) {
+        if (a.priority != b.priority)
+            return a.priority > b.priority;
+        QDate da = QDate::fromString(a.dueDate, "yyyy-MM-dd");
+        QDate db = QDate::fromString(b.dueDate, "yyyy-MM-dd");
+        if (da.isValid() && db.isValid())
+            return da < db;
+        if (da.isValid()) return true;
+        if (db.isValid()) return false;
+        return a.id < b.id;
+    });
+    if (candidates.size() > maxRecs)
+        candidates.resize(maxRecs);
+    return candidates;
+}
+
+void MainWindow::updateRecommendations() {
+    QVector<Task> recs = getGraphRecommendedTasks(5);
+    ui->taskRecommendationListWidget->clear();
+    for (const Task& t : recs) {
+        QString rec = QString("%1 (Priority: %2, Due: %3)").arg(t.title).arg(t.priority).arg(t.dueDate);
+        ui->taskRecommendationListWidget->addItem(rec);
+    }
+}
 
 
 void MainWindow::on_StartButton_clicked()
